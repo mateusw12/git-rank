@@ -7,6 +7,7 @@ import {
   GithubCandidateEvaluationResponse,
   GithubCandidateScoringResponse,
 } from './github.service';
+import { RepositoryCommitAnalysisResponse } from '../commit-analysis/types/commit-analysis.type';
 
 @ApiTags('github')
 @ApiBearerAuth('access-token')
@@ -41,5 +42,17 @@ export class GithubController {
     @Param('username') username: string,
   ): Promise<GithubCandidateEvaluationResponse> {
     return this.githubService.getCandidateEvaluation(username);
+  }
+
+  @ApiOperation({
+    summary:
+      'Analisa commits de um repositorio (frequencia, horarios e tamanho medio)',
+  })
+  @Get('repos/:owner/:repo/commits')
+  async getRepositoryCommitsAnalysis(
+    @Param('owner') owner: string,
+    @Param('repo') repo: string,
+  ): Promise<RepositoryCommitAnalysisResponse> {
+    return this.githubService.getRepositoryCommitAnalysis(owner, repo);
   }
 }

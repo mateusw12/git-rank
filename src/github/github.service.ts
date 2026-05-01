@@ -8,6 +8,13 @@ import { ScoringService } from '../scoring/scoring.service';
 import { CandidateScoreResult } from '../scoring/types/candidate-score.type';
 import { CandidateAiEvaluation } from '../evaluation/types/candidate-ai-evaluation.type';
 import { CandidateEvaluationService } from '../evaluation/evaluation.service';
+import {
+  CommitActivitySample,
+  GithubCommitDetail,
+  GithubCommitListItem,
+} from './types/github-commit.type';
+import { CommitAnalysisService } from '../commit-analysis/commit-analysis.service';
+import { RepositoryCommitAnalysisResponse } from '../commit-analysis/types/commit-analysis.type';
 
 export interface GithubCandidateScoringResponse {
   username: string;
@@ -24,7 +31,10 @@ export interface GithubCandidateEvaluationResponse {
 
 @Injectable()
 export class GithubService {
-  private readonly cacheTtlSeconds: number;
+  private readonly repositoryCacheTtlSeconds: number;
+  private readonly commitAnalysisCacheTtlSeconds: number;
+  private readonly commitsFetchLimit: number;
+  private readonly commitsStatsLimit: number;
 
   constructor(
     private readonly http: HttpService,
@@ -32,10 +42,23 @@ export class GithubService {
     private readonly redisCacheService: RedisCacheService,
     private readonly scoringService: ScoringService,
     private readonly candidateEvaluationService: CandidateEvaluationService,
+    private readonly commitAnalysisService: CommitAnalysisService,
   ) {
-    this.cacheTtlSeconds = this.configService.get<number>(
+    this.repositoryCacheTtlSeconds = this.configService.get<number>(
       'GITHUB_REPOS_CACHE_TTL_SECONDS',
       300,
+    );
+    this.commitAnalysisCacheTtlSeconds = this.configService.get<number>(
+      'GITHUB_COMMITS_CACHE_TTL_SECONDS',
+      600,
+    );
+    this.commitsFetchLimit = this.configService.get<number>(
+      'GITHUB_COMMITS_FETCH_LIMIT',
+      100,
+    );
+    this.commitsStatsLimit = this.configService.get<number>(
+      'GITHUB_COMMITS_STATS_LIMIT',
+      25,
     );
   }
 
@@ -64,7 +87,7 @@ export class GithubService {
         await this.redisCacheService.setJson(
           cacheKey,
           response.data,
-          this.cacheTtlSeconds,
+          this.repositoryCacheTtlSeconds,
         );
       } catch {
         // Nao bloqueia a resposta quando ocorrer falha temporaria de cache.
@@ -120,5 +143,117 @@ export class GithubService {
       scoring,
       aiEvaluation,
     };
+  }
+
+  async getRepositoryCommitAnalysis(
+    owner: string,
+    repository: string,
+  ): Promise<RepositoryCommitAnalysisResponse> {
+    const normalizedOwner = owner.toLowerCase();
+    const normalizedRepository = repository.toLowerCase();
+    const cacheKey = `github:commits:analysis:${normalizedOwner}:${normalizedRepository}`;
+
+    try {
+      const cached = await this.redisCacheService.getJson<RepositoryCommitAnalysisResponse>(
+        cacheKey,
+      );
+
+      if (cached) {
+        return cached;
+      }
+    } catch {
+      // Nao bloqueia a rota quando ocorrer falha temporaria de cache.
+    }
+
+    try {
+      const commitsResponse = await firstValueFrom(
+        this.http.get<GithubCommitListItem[]>(
+          `/repos/${normalizedOwner}/${normalizedRepository}/commits`,
+          {
+            params: {
+              per_page: this.commitsFetchLimit,
+            },
+          },
+        ),
+      );
+
+      const commits = commitsResponse.data;
+      const detailedCommits = await this.fetchCommitDetails(
+        normalizedOwner,
+        normalizedRepository,
+        commits,
+      );
+      const latestCommits = detailedCommits.slice(0, 10);
+
+      const response: RepositoryCommitAnalysisResponse = {
+        owner: normalizedOwner,
+        repository: normalizedRepository,
+        generatedAt: new Date().toISOString(),
+        analysis: this.commitAnalysisService.analyze(detailedCommits),
+        samples: {
+          commitsFetched: commits.length,
+          commitsWithStats: detailedCommits.length,
+          latestCommits,
+        },
+      };
+
+      try {
+        await this.redisCacheService.setJson(
+          cacheKey,
+          response,
+          this.commitAnalysisCacheTtlSeconds,
+        );
+      } catch {
+        // Nao bloqueia a resposta quando ocorrer falha temporaria de cache.
+      }
+
+      return response;
+    } catch (error) {
+      throw new HttpException(
+        'Erro ao buscar commits do repositorio no GitHub',
+        error.response?.status || 500,
+      );
+    }
+  }
+
+  private async fetchCommitDetails(
+    owner: string,
+    repository: string,
+    commits: GithubCommitListItem[],
+  ): Promise<CommitActivitySample[]> {
+    const slice = commits.slice(0, this.commitsStatsLimit);
+
+    const detailed = await Promise.all(
+      slice.map(async (commit) => {
+        try {
+          const detailResponse = await firstValueFrom(
+            this.http.get<GithubCommitDetail>(
+              `/repos/${owner}/${repository}/commits/${commit.sha}`,
+            ),
+          );
+          const stats = detailResponse.data.stats;
+
+          return {
+            sha: commit.sha,
+            authoredAt: commit.commit.author.date,
+            message: commit.commit.message,
+            totalChanges: stats?.total ?? 0,
+            additions: stats?.additions ?? 0,
+            deletions: stats?.deletions ?? 0,
+          } satisfies CommitActivitySample;
+        } catch {
+          return {
+            sha: commit.sha,
+            authoredAt: commit.commit.author.date,
+            message: commit.commit.message,
+            totalChanges: 0,
+            additions: 0,
+            deletions: 0,
+          } satisfies CommitActivitySample;
+        }
+      }),
+    );
+
+    return detailed;
   }
 }

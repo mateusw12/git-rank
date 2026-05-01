@@ -5,11 +5,13 @@ import { GithubController } from './github.controller';
 import { GithubService } from './github.service';
 import { ScoringModule } from '../scoring/scoring.module';
 import { EvaluationModule } from '../evaluation/evaluation.module';
+import { CommitAnalysisModule } from '../commit-analysis/commit-analysis.module';
 
 @Module({
   imports: [
     ScoringModule,
     EvaluationModule,
+    CommitAnalysisModule,
     HttpModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
