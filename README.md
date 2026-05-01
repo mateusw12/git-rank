@@ -46,6 +46,8 @@ JWT_REFRESH_SECRET=troque-este-segredo-refresh
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 GITHUB_TOKEN=opcional-para-a-api-do-github
+GITHUB_REPOS_CACHE_TTL_SECONDS=300
+CACHE_PREFIX=git-rank
 
 ## Endpoints principais
 
