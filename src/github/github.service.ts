@@ -4,6 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { RedisCacheService } from '../cache/redis-cache.service';
 import { GithubRepository } from './types/github-repository.type';
+import { ScoringService } from '../scoring/scoring.service';
+import { CandidateScoreResult } from '../scoring/types/candidate-score.type';
+
+export interface GithubCandidateScoringResponse {
+  username: string;
+  repositories: GithubRepository[];
+  scoring: CandidateScoreResult;
+}
 
 @Injectable()
 export class GithubService {
@@ -13,6 +21,7 @@ export class GithubService {
     private readonly http: HttpService,
     private readonly configService: ConfigService,
     private readonly redisCacheService: RedisCacheService,
+    private readonly scoringService: ScoringService,
   ) {
     this.cacheTtlSeconds = this.configService.get<number>(
       'GITHUB_REPOS_CACHE_TTL_SECONDS',
@@ -58,5 +67,17 @@ export class GithubService {
         error.response?.status || 500
       );
     }
+  }
+
+  async getCandidateScoring(
+    username: string,
+  ): Promise<GithubCandidateScoringResponse> {
+    const repositories = await this.getUserRepository(username);
+
+    return {
+      username: username.toLowerCase(),
+      repositories,
+      scoring: this.scoringService.calculateCandidateScore(repositories),
+    };
   }
 }

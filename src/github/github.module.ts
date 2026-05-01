@@ -3,9 +3,11 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { GithubController } from './github.controller';
 import { GithubService } from './github.service';
+import { ScoringModule } from '../scoring/scoring.module';
 
 @Module({
   imports: [
+    ScoringModule,
     HttpModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {

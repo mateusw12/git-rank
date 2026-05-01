@@ -13,6 +13,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { RedisMemoryModule } from './queue/redis-memory.module';
 import { RedisMemoryService } from './queue/redis-memory.service';
 import { GithubModule } from './github/github.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 const enableBullMq = process.env.ENABLE_BULLMQ !== 'false';
 
@@ -38,6 +39,7 @@ const enableBullMq = process.env.ENABLE_BULLMQ !== 'false';
         ]
       : []),
     AuthModule,
+    ScoringModule,
     GithubModule,
   ],
   controllers: [AppController],
