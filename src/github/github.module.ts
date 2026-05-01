@@ -4,10 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { GithubController } from './github.controller';
 import { GithubService } from './github.service';
 import { ScoringModule } from '../scoring/scoring.module';
+import { EvaluationModule } from '../evaluation/evaluation.module';
 
 @Module({
   imports: [
     ScoringModule,
+    EvaluationModule,
     HttpModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {

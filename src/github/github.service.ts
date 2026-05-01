@@ -6,11 +6,20 @@ import { RedisCacheService } from '../cache/redis-cache.service';
 import { GithubRepository } from './types/github-repository.type';
 import { ScoringService } from '../scoring/scoring.service';
 import { CandidateScoreResult } from '../scoring/types/candidate-score.type';
+import { CandidateAiEvaluation } from '../evaluation/types/candidate-ai-evaluation.type';
+import { CandidateEvaluationService } from '../evaluation/evaluation.service';
 
 export interface GithubCandidateScoringResponse {
   username: string;
   repositories: GithubRepository[];
   scoring: CandidateScoreResult;
+}
+
+export interface GithubCandidateEvaluationResponse {
+  username: string;
+  repositories: GithubRepository[];
+  scoring: CandidateScoreResult;
+  aiEvaluation: CandidateAiEvaluation;
 }
 
 @Injectable()
@@ -22,6 +31,7 @@ export class GithubService {
     private readonly configService: ConfigService,
     private readonly redisCacheService: RedisCacheService,
     private readonly scoringService: ScoringService,
+    private readonly candidateEvaluationService: CandidateEvaluationService,
   ) {
     this.cacheTtlSeconds = this.configService.get<number>(
       'GITHUB_REPOS_CACHE_TTL_SECONDS',
@@ -78,6 +88,37 @@ export class GithubService {
       username: username.toLowerCase(),
       repositories,
       scoring: this.scoringService.calculateCandidateScore(repositories),
+    };
+  }
+
+  async getCandidateEvaluation(
+    username: string,
+  ): Promise<GithubCandidateEvaluationResponse> {
+    const normalizedUsername = username.toLowerCase();
+    const repositories = await this.getUserRepository(normalizedUsername);
+    const scoring = this.scoringService.calculateCandidateScore(repositories);
+    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate({
+      username: normalizedUsername,
+      scoring,
+      repositories: repositories.map((repository) => ({
+        name: repository.name,
+        fullName: repository.full_name,
+        language: repository.language,
+        stars: repository.stargazers_count,
+        forks: repository.forks_count,
+        openIssues: repository.open_issues_count,
+        isFork: repository.fork,
+        pushedAt: repository.pushed_at,
+        createdAt: repository.created_at,
+        updatedAt: repository.updated_at,
+      })),
+    });
+
+    return {
+      username: normalizedUsername,
+      repositories,
+      scoring,
+      aiEvaluation,
     };
   }
 }

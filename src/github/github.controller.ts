@@ -3,7 +3,10 @@ import { GithubService } from './github.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { GithubRepository } from './types/github-repository.type';
-import { GithubCandidateScoringResponse } from './github.service';
+import {
+  GithubCandidateEvaluationResponse,
+  GithubCandidateScoringResponse,
+} from './github.service';
 
 @ApiTags('github')
 @ApiBearerAuth('access-token')
@@ -28,5 +31,15 @@ export class GithubController {
     @Param('username') username: string,
   ): Promise<GithubCandidateScoringResponse> {
     return this.githubService.getCandidateScoring(username);
+  }
+
+  @ApiOperation({
+    summary: 'Busca os dados do GitHub e faz avaliacao IA do candidato',
+  })
+  @Get(':username/evaluation')
+  async getCandidateEvaluation(
+    @Param('username') username: string,
+  ): Promise<GithubCandidateEvaluationResponse> {
+    return this.githubService.getCandidateEvaluation(username);
   }
 }
