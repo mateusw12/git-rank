@@ -1,6 +1,6 @@
 # Git Rank API
 
-API em NestJS criada na raiz do repositório, sem subpastas.
+API em NestJS.
 
 ## Stack
 
