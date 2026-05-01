@@ -1,14 +1,16 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { GithubService } from './github.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { GithubRepository } from './types/github-repository.type';
 import {
+  GithubBatchCandidateEvaluationResponse,
   GithubCandidateEvaluationResponse,
   GithubCandidateInsightsResponse,
   GithubCandidateScoringResponse,
 } from './github.service';
 import { RepositoryCommitAnalysisResponse } from '../commit-analysis/types/commit-analysis.type';
+import { BatchCandidateEvaluationDto } from './dto/batch-candidate-evaluation.dto';
 
 @ApiTags('github')
 @ApiBearerAuth('access-token')
@@ -66,5 +68,16 @@ export class GithubController {
     @Param('repo') repo: string,
   ): Promise<RepositoryCommitAnalysisResponse> {
     return this.githubService.getRepositoryCommitAnalysis(owner, repo);
+  }
+
+  @ApiOperation({
+    summary:
+      'Avalia varios candidatos do GitHub em lote e retorna apenas resumo (sem lista de repositorios)',
+  })
+  @Post('evaluations/batch')
+  async getBatchCandidateEvaluations(
+    @Body() dto: BatchCandidateEvaluationDto,
+  ): Promise<GithubBatchCandidateEvaluationResponse> {
+    return this.githubService.getBatchCandidateEvaluationSummary(dto.usernames);
   }
 }

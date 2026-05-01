@@ -38,12 +38,37 @@ export interface GithubCandidateInsightsResponse {
   insights: CandidateInsights;
 }
 
+export interface GithubCandidateEvaluationSummary {
+  username: string;
+  scoring: CandidateScoreResult['scores'];
+  aiEvaluation: CandidateAiEvaluation;
+  profile: string;
+  stack: string[];
+  evolution: CandidateInsights['evolution'];
+}
+
+export interface GithubBatchCandidateEvaluationItem {
+  username: string;
+  status: 'ok' | 'error';
+  summary?: GithubCandidateEvaluationSummary;
+  error?: string;
+}
+
+export interface GithubBatchCandidateEvaluationResponse {
+  totalRequested: number;
+  totalProcessed: number;
+  totalSucceeded: number;
+  totalFailed: number;
+  results: GithubBatchCandidateEvaluationItem[];
+}
+
 @Injectable()
 export class GithubService {
   private readonly repositoryCacheTtlSeconds: number;
   private readonly commitAnalysisCacheTtlSeconds: number;
   private readonly commitsFetchLimit: number;
   private readonly commitsStatsLimit: number;
+  private readonly batchEvaluationConcurrency: number;
 
   constructor(
     private readonly http: HttpService,
@@ -69,6 +94,10 @@ export class GithubService {
     this.commitsStatsLimit = this.configService.get<number>(
       'GITHUB_COMMITS_STATS_LIMIT',
       25,
+    );
+    this.batchEvaluationConcurrency = this.configService.get<number>(
+      'GITHUB_BATCH_EVALUATION_CONCURRENCY',
+      4,
     );
   }
 
@@ -130,22 +159,9 @@ export class GithubService {
     const normalizedUsername = username.toLowerCase();
     const repositories = await this.getUserRepository(normalizedUsername);
     const scoring = this.scoringService.calculateCandidateScore(repositories);
-    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate({
-      username: normalizedUsername,
-      scoring,
-      repositories: repositories.map((repository) => ({
-        name: repository.name,
-        fullName: repository.full_name,
-        language: repository.language,
-        stars: repository.stargazers_count,
-        forks: repository.forks_count,
-        openIssues: repository.open_issues_count,
-        isFork: repository.fork,
-        pushedAt: repository.pushed_at,
-        createdAt: repository.created_at,
-        updatedAt: repository.updated_at,
-      })),
-    });
+    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate(
+      this.buildCandidateEvaluationPayload(normalizedUsername, repositories, scoring),
+    );
 
     return {
       username: normalizedUsername,
@@ -167,6 +183,53 @@ export class GithubService {
       repositories,
       scoring,
       insights: this.candidateInsightsService.buildInsights(repositories),
+    };
+  }
+
+  async getBatchCandidateEvaluationSummary(
+    usernames: string[],
+  ): Promise<GithubBatchCandidateEvaluationResponse> {
+    const normalizedUsernames = Array.from(
+      new Set(
+        usernames
+          .map((username) => username.trim().toLowerCase())
+          .filter((username) => username.length > 0),
+      ),
+    );
+
+    const tasks = normalizedUsernames.map((username) => async () => {
+      try {
+        const summary = await this.buildCandidateSummary(username);
+        return {
+          username,
+          status: 'ok' as const,
+          summary,
+        };
+      } catch (error) {
+        return {
+          username,
+          status: 'error' as const,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Falha inesperada ao avaliar candidato',
+        };
+      }
+    });
+
+    const results = await this.runWithConcurrency(
+      tasks,
+      Math.max(1, this.batchEvaluationConcurrency),
+    );
+
+    const totalSucceeded = results.filter((item) => item.status === 'ok').length;
+
+    return {
+      totalRequested: usernames.length,
+      totalProcessed: normalizedUsernames.length,
+      totalSucceeded,
+      totalFailed: results.length - totalSucceeded,
+      results,
     };
   }
 
@@ -280,5 +343,86 @@ export class GithubService {
     );
 
     return detailed;
+  }
+
+  private async buildCandidateSummary(
+    username: string,
+  ): Promise<GithubCandidateEvaluationSummary> {
+    const repositories = await this.getUserRepository(username);
+    const scoring = this.scoringService.calculateCandidateScore(repositories);
+    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate(
+      this.buildCandidateEvaluationPayload(username, repositories, scoring),
+    );
+    const insights = this.candidateInsightsService.buildInsights(repositories);
+
+    return {
+      username,
+      scoring: scoring.scores,
+      aiEvaluation,
+      profile: insights.technology.profile,
+      stack: insights.technology.stack,
+      evolution: insights.evolution,
+    };
+  }
+
+  private buildCandidateEvaluationPayload(
+    username: string,
+    repositories: GithubRepository[],
+    scoring: CandidateScoreResult,
+  ): {
+    username: string;
+    scoring: CandidateScoreResult;
+    repositories: Array<{
+      name: string;
+      fullName: string;
+      language: string | null;
+      stars: number;
+      forks: number;
+      openIssues: number;
+      isFork: boolean;
+      pushedAt: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  } {
+    return {
+      username,
+      scoring,
+      repositories: repositories.map((repository) => ({
+        name: repository.name,
+        fullName: repository.full_name,
+        language: repository.language,
+        stars: repository.stargazers_count,
+        forks: repository.forks_count,
+        openIssues: repository.open_issues_count,
+        isFork: repository.fork,
+        pushedAt: repository.pushed_at,
+        createdAt: repository.created_at,
+        updatedAt: repository.updated_at,
+      })),
+    };
+  }
+
+  private async runWithConcurrency<T>(
+    tasks: Array<() => Promise<T>>,
+    concurrency: number,
+  ): Promise<T[]> {
+    const safeConcurrency = Math.min(Math.max(concurrency, 1), tasks.length || 1);
+    const results: T[] = new Array(tasks.length);
+    let currentIndex = 0;
+
+    const worker = async (): Promise<void> => {
+      while (currentIndex < tasks.length) {
+        const taskIndex = currentIndex;
+        currentIndex += 1;
+        results[taskIndex] = await tasks[taskIndex]();
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: safeConcurrency }, () => worker()),
+    );
+
+    return results;
   }
 }
