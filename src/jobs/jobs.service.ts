@@ -18,7 +18,9 @@ export class JobsService {
     private readonly databaseService: DatabaseService,
   ) {}
 
-  async enqueue(dto: CreateJobDto): Promise<{ id: string; queueJobId: string }> {
+  async enqueue(
+    dto: CreateJobDto,
+  ): Promise<{ id: string; queueJobId: string }> {
     const payload = dto.payload ?? {};
     const queueJob = await this.jobsQueue.add(dto.type, payload);
 
@@ -50,9 +52,11 @@ export class JobsService {
       throw new NotFoundException(`Job ${id} not found`);
     }
 
-    const queueJob: Job | undefined = await this.jobsQueue.getJob(record.queueJobId);
+    const queueJob: Job | undefined = await this.jobsQueue.getJob(
+      record.queueJobId,
+    );
     const state = queueJob ? await queueJob.getState() : 'unknown';
-    const result = queueJob?.returnvalue ?? null;
+    const result: unknown = queueJob ? (queueJob.returnvalue as unknown) : null;
 
     return {
       ...record,

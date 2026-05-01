@@ -8,7 +8,11 @@ describe('AppController (e2e)', () => {
 
   beforeEach(async () => {
     process.env.ENABLE_BULLMQ = 'false';
-    const { AppModule } = require('./../src/app.module');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const appModuleImport = require('../src/app.module') as {
+      AppModule: new (...args: unknown[]) => unknown;
+    };
+    const { AppModule } = appModuleImport;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -19,14 +23,11 @@ describe('AppController (e2e)', () => {
   });
 
   it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect({
-        service: 'git-rank-api',
-        status: 'ok',
-        docs: '/docs',
-      });
+    return request(app.getHttpServer()).get('/').expect(200).expect({
+      service: 'git-rank-api',
+      status: 'ok',
+      docs: '/docs',
+    });
   });
 
   afterEach(async () => {

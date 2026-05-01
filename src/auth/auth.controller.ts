@@ -41,14 +41,18 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
-  @ApiOperation({ summary: 'Revalida sessao usando refresh token e rotaciona os tokens' })
+  @ApiOperation({
+    summary: 'Revalida sessao usando refresh token e rotaciona os tokens',
+  })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto);
   }
 
   @Get('me')
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ description: 'Retorna o usuario autenticado da requisicao.' })
+  @ApiOkResponse({
+    description: 'Retorna o usuario autenticado da requisicao.',
+  })
   @ApiOperation({ summary: 'Retorna dados do usuario autenticado' })
   me(@UserRequest() user: AuthenticatedUser) {
     return this.authService.getMe(user.id);

@@ -23,7 +23,9 @@ export class GithubController {
     summary: 'Busca os repositórios públicos de um usuário do GitHub',
   })
   @Get(':username/repos')
-  async getRepository(@Param('username') username: string): Promise<GithubRepository[]> {
+  async getRepository(
+    @Param('username') username: string,
+  ): Promise<GithubRepository[]> {
     return this.githubService.getUserRepository(username);
   }
 

@@ -3,7 +3,11 @@ import { Job } from 'bullmq';
 
 @Processor('jobs')
 export class JobsProcessor extends WorkerHost {
-  async process(job: Job<Record<string, unknown>, unknown, string>): Promise<unknown> {
+  async process(
+    job: Job<Record<string, unknown>, unknown, string>,
+  ): Promise<unknown> {
+    await Promise.resolve();
+
     return {
       processedAt: new Date().toISOString(),
       type: job.name,

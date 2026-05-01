@@ -4,7 +4,10 @@ type CollectionRecord = Record<string, unknown>;
 
 @Injectable()
 export class DatabaseService {
-  private readonly collections = new Map<string, Map<string, CollectionRecord>>();
+  private readonly collections = new Map<
+    string,
+    Map<string, CollectionRecord>
+  >();
 
   private getCollection(name: string): Map<string, CollectionRecord> {
     const existing = this.collections.get(name);
@@ -22,7 +25,10 @@ export class DatabaseService {
     return `${collection.size + 1}`;
   }
 
-  insert<T extends CollectionRecord>(collectionName: string, data: T): T & { id: string } {
+  insert<T extends CollectionRecord>(
+    collectionName: string,
+    data: T,
+  ): T & { id: string } {
     const collection = this.getCollection(collectionName);
     const id = this.nextId(collection);
     const created = { id, ...data };
@@ -31,7 +37,10 @@ export class DatabaseService {
     return created;
   }
 
-  findById<T extends CollectionRecord>(collectionName: string, id: string): (T & { id: string }) | null {
+  findById<T extends CollectionRecord>(
+    collectionName: string,
+    id: string,
+  ): (T & { id: string }) | null {
     const collection = this.getCollection(collectionName);
     const found = collection.get(id);
 
@@ -42,7 +51,9 @@ export class DatabaseService {
     return found as T & { id: string };
   }
 
-  findAll<T extends CollectionRecord>(collectionName: string): Array<T & { id: string }> {
+  findAll<T extends CollectionRecord>(
+    collectionName: string,
+  ): Array<T & { id: string }> {
     const collection = this.getCollection(collectionName);
     return Array.from(collection.values()) as Array<T & { id: string }>;
   }

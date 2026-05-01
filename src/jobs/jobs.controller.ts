@@ -23,7 +23,9 @@ export class JobsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um job salvo na camada de database em memoria' })
+  @ApiOperation({
+    summary: 'Busca um job salvo na camada de database em memoria',
+  })
   @ApiParam({ name: 'id', description: 'ID interno da camada de database' })
   @ApiOkResponse({ description: 'Job encontrado com estado atual da fila.' })
   @ApiNotFoundResponse({ description: 'Job nao encontrado.' })

@@ -1,8 +1,4 @@
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisCacheService } from '../cache/redis-cache.service';
 import {
@@ -41,7 +37,9 @@ export class CandidateEvaluationService {
     );
   }
 
-  async evaluateCandidate(input: CandidateEvaluationInput): Promise<CandidateAiEvaluation> {
+  async evaluateCandidate(
+    input: CandidateEvaluationInput,
+  ): Promise<CandidateAiEvaluation> {
     const username = input.username.toLowerCase();
 
     const fromDictionary = this.getFromDictionary(username);
@@ -53,9 +51,10 @@ export class CandidateEvaluationService {
     const cacheKey = `gemini:evaluation:${username}`;
 
     try {
-      const fromRedis = await this.redisCacheService.getJson<StoredCandidateAiEvaluation>(
-        cacheKey,
-      );
+      const fromRedis =
+        await this.redisCacheService.getJson<StoredCandidateAiEvaluation>(
+          cacheKey,
+        );
 
       if (fromRedis && this.isNotExpired(fromRedis.cacheUntil)) {
         this.candidateEvaluationStore.set(fromRedis);
@@ -68,14 +67,20 @@ export class CandidateEvaluationService {
     const generated = await this.generateWithFallback(input);
     const stored: StoredCandidateAiEvaluation = {
       username,
-      cacheUntil: new Date(Date.now() + this.cacheTtlSeconds * 1000).toISOString(),
+      cacheUntil: new Date(
+        Date.now() + this.cacheTtlSeconds * 1000,
+      ).toISOString(),
       value: generated,
     };
 
     this.candidateEvaluationStore.set(stored);
 
     try {
-      await this.redisCacheService.setJson(cacheKey, stored, this.cacheTtlSeconds);
+      await this.redisCacheService.setJson(
+        cacheKey,
+        stored,
+        this.cacheTtlSeconds,
+      );
     } catch {
       // Nao bloqueia a resposta quando ocorrer falha temporaria de cache.
     }
@@ -109,7 +114,8 @@ export class CandidateEvaluationService {
     try {
       return await this.generateWithGemini(input);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : 'erro desconhecido';
+      const reason =
+        error instanceof Error ? error.message : 'erro desconhecido';
       this.logger.warn(
         `Gemini indisponivel para ${input.username}. Aplicando fallback heuristico. Motivo: ${reason}`,
       );
@@ -132,7 +138,10 @@ export class CandidateEvaluationService {
 
     const activityNormalized = this.normalizeScore(scores.activityScore, 120);
     const qualityNormalized = this.normalizeScore(scores.qualityScore, 140);
-    const consistencyNormalized = this.normalizeScore(scores.consistencyScore, 100);
+    const consistencyNormalized = this.normalizeScore(
+      scores.consistencyScore,
+      100,
+    );
 
     const finalScore = Math.round(
       activityNormalized * 0.35 +
@@ -247,7 +256,10 @@ Retorne JSON valido e sem markdown:
 `;
   }
 
-  private parseModelResponse(text: string, modelName: string): CandidateAiEvaluation {
+  private parseModelResponse(
+    text: string,
+    modelName: string,
+  ): CandidateAiEvaluation {
     const jsonPayload = this.extractJsonPayload(text);
 
     let parsed: unknown;

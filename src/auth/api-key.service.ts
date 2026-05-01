@@ -26,7 +26,10 @@ export class ApiKeyService {
     private readonly configService: ConfigService,
   ) {}
 
-  createApiKey(userId: string, dto: CreateApiKeyDto): ApiKeyResponse & { apiKey: string } {
+  createApiKey(
+    userId: string,
+    dto: CreateApiKeyDto,
+  ): ApiKeyResponse & { apiKey: string } {
     const user = this.authStore.findUserById(userId);
 
     if (!user) {
@@ -34,7 +37,8 @@ export class ApiKeyService {
     }
 
     const apiKey = `gitrk_${randomBytes(32).toString('hex')}`;
-    const expiresInDays = dto.expiresInDays ?? this.getDefaultApiKeyExpirationDays();
+    const expiresInDays =
+      dto.expiresInDays ?? this.getDefaultApiKeyExpirationDays();
     const expiresAt = new Date(
       Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
     ).toISOString();

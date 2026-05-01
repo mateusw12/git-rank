@@ -24,7 +24,11 @@ export class RedisCacheService implements OnModuleDestroy {
     return JSON.parse(value) as T;
   }
 
-  async setJson(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+  async setJson(
+    key: string,
+    value: unknown,
+    ttlSeconds: number,
+  ): Promise<void> {
     const client = await this.getClient();
     const namespacedKey = this.resolveKey(key);
     const payload = JSON.stringify(value);

@@ -20,7 +20,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Git Rank API')
-    .setDescription('API em NestJS com Swagger, BullMQ e camada de database em memoria')
+    .setDescription(
+      'API em NestJS com Swagger, BullMQ e camada de database em memoria',
+    )
     .setVersion('1.0.0')
     .addBearerAuth(
       {
@@ -40,4 +42,4 @@ async function bootstrap() {
 
   await app.listen(port);
 }
-bootstrap();
+void bootstrap();

@@ -2,6 +2,7 @@ import { Injectable, HttpException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { isAxiosError } from 'axios';
 import { RedisCacheService } from '../cache/redis-cache.service';
 import { GithubRepository } from './types/github-repository.type';
 import { ScoringService } from '../scoring/scoring.service';
@@ -106,9 +107,8 @@ export class GithubService {
     const cacheKey = `github:repos:${normalizedUsername}`;
 
     try {
-      const cached = await this.redisCacheService.getJson<GithubRepository[]>(
-        cacheKey,
-      );
+      const cached =
+        await this.redisCacheService.getJson<GithubRepository[]>(cacheKey);
 
       if (cached) {
         return cached;
@@ -119,7 +119,7 @@ export class GithubService {
 
     try {
       const response = await firstValueFrom(
-        this.http.get<GithubRepository[]>(`/users/${normalizedUsername}/repos`)
+        this.http.get<GithubRepository[]>(`/users/${normalizedUsername}/repos`),
       );
 
       try {
@@ -136,7 +136,7 @@ export class GithubService {
     } catch (error) {
       throw new HttpException(
         'Erro ao buscar dados do GitHub',
-        error.response?.status || 500
+        this.resolveHttpStatusFromUnknownError(error),
       );
     }
   }
@@ -159,9 +159,14 @@ export class GithubService {
     const normalizedUsername = username.toLowerCase();
     const repositories = await this.getUserRepository(normalizedUsername);
     const scoring = this.scoringService.calculateCandidateScore(repositories);
-    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate(
-      this.buildCandidateEvaluationPayload(normalizedUsername, repositories, scoring),
-    );
+    const aiEvaluation =
+      await this.candidateEvaluationService.evaluateCandidate(
+        this.buildCandidateEvaluationPayload(
+          normalizedUsername,
+          repositories,
+          scoring,
+        ),
+      );
 
     return {
       username: normalizedUsername,
@@ -222,7 +227,9 @@ export class GithubService {
       Math.max(1, this.batchEvaluationConcurrency),
     );
 
-    const totalSucceeded = results.filter((item) => item.status === 'ok').length;
+    const totalSucceeded = results.filter(
+      (item) => item.status === 'ok',
+    ).length;
 
     return {
       totalRequested: usernames.length,
@@ -242,9 +249,10 @@ export class GithubService {
     const cacheKey = `github:commits:analysis:${normalizedOwner}:${normalizedRepository}`;
 
     try {
-      const cached = await this.redisCacheService.getJson<RepositoryCommitAnalysisResponse>(
-        cacheKey,
-      );
+      const cached =
+        await this.redisCacheService.getJson<RepositoryCommitAnalysisResponse>(
+          cacheKey,
+        );
 
       if (cached) {
         return cached;
@@ -299,7 +307,7 @@ export class GithubService {
     } catch (error) {
       throw new HttpException(
         'Erro ao buscar commits do repositorio no GitHub',
-        error.response?.status || 500,
+        this.resolveHttpStatusFromUnknownError(error),
       );
     }
   }
@@ -350,9 +358,10 @@ export class GithubService {
   ): Promise<GithubCandidateEvaluationSummary> {
     const repositories = await this.getUserRepository(username);
     const scoring = this.scoringService.calculateCandidateScore(repositories);
-    const aiEvaluation = await this.candidateEvaluationService.evaluateCandidate(
-      this.buildCandidateEvaluationPayload(username, repositories, scoring),
-    );
+    const aiEvaluation =
+      await this.candidateEvaluationService.evaluateCandidate(
+        this.buildCandidateEvaluationPayload(username, repositories, scoring),
+      );
     const insights = this.candidateInsightsService.buildInsights(repositories);
 
     return {
@@ -407,8 +416,14 @@ export class GithubService {
     tasks: Array<() => Promise<T>>,
     concurrency: number,
   ): Promise<T[]> {
-    const safeConcurrency = Math.min(Math.max(concurrency, 1), tasks.length || 1);
-    const results: T[] = new Array(tasks.length);
+    const safeConcurrency = Math.min(
+      Math.max(concurrency, 1),
+      tasks.length || 1,
+    );
+    const results: Array<T | undefined> = Array.from(
+      { length: tasks.length },
+      () => undefined,
+    );
     let currentIndex = 0;
 
     const worker = async (): Promise<void> => {
@@ -419,10 +434,22 @@ export class GithubService {
       }
     };
 
-    await Promise.all(
-      Array.from({ length: safeConcurrency }, () => worker()),
-    );
+    await Promise.all(Array.from({ length: safeConcurrency }, () => worker()));
 
-    return results;
+    return results.map((item) => {
+      if (item === undefined) {
+        throw new Error('Falha ao processar tarefa em lote');
+      }
+
+      return item;
+    });
+  }
+
+  private resolveHttpStatusFromUnknownError(error: unknown): number {
+    if (isAxiosError(error)) {
+      return error.response?.status ?? 500;
+    }
+
+    return 500;
   }
 }

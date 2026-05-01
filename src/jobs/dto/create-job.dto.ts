@@ -7,7 +7,10 @@ export class CreateJobDto {
   @IsNotEmpty()
   type!: string;
 
-  @ApiProperty({ example: { username: 'mateusw12', language: 'ts' }, required: false })
+  @ApiProperty({
+    example: { username: 'mateusw12', language: 'ts' },
+    required: false,
+  })
   @IsOptional()
   @IsObject()
   payload?: Record<string, unknown>;

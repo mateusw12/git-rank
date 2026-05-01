@@ -21,7 +21,10 @@ export class GeminiService {
 
   constructor(private readonly configService: ConfigService) {
     this.modelCandidates = this.resolveModelCandidates();
-    this.temperature = this.configService.get<number>('GEMINI_TEMPERATURE', 0.2);
+    this.temperature = this.configService.get<number>(
+      'GEMINI_TEMPERATURE',
+      0.2,
+    );
     this.maxOutputTokens = this.configService.get<number>(
       'GEMINI_MAX_OUTPUT_TOKENS',
       512,
@@ -57,9 +60,12 @@ export class GeminiService {
           model: modelName,
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'erro desconhecido';
+        const message =
+          error instanceof Error ? error.message : 'erro desconhecido';
         errors.push(`${modelName}: ${message}`);
-        this.logger.warn(`Falha ao consultar Gemini com modelo ${modelName}: ${message}`);
+        this.logger.warn(
+          `Falha ao consultar Gemini com modelo ${modelName}: ${message}`,
+        );
       }
     }
 
@@ -75,7 +81,9 @@ export class GeminiService {
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
 
-    const modelFromLegacyVar = this.configService.get<string>('GEMINI_MODEL', '').trim();
+    const modelFromLegacyVar = this.configService
+      .get<string>('GEMINI_MODEL', '')
+      .trim();
 
     const defaults = [
       'gemini-2.0-flash',

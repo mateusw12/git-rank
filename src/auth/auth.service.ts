@@ -30,7 +30,9 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<{ user: AuthenticatedUser } & TokenPair> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ user: AuthenticatedUser } & TokenPair> {
     const existing = this.authStore.findUserByEmail(dto.email);
 
     if (existing) {
@@ -38,7 +40,8 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const role = this.authStore.countUsers() === 0 ? UserRole.ADMIN : UserRole.USER;
+    const role =
+      this.authStore.countUsers() === 0 ? UserRole.ADMIN : UserRole.USER;
 
     const created = this.authStore.createUser({
       name: dto.name,
@@ -107,7 +110,9 @@ export class AuthService {
     const session = this.authStore.getSession(payload.sub);
 
     if (!session) {
-      throw new UnauthorizedException('Sessao nao encontrada para este usuario');
+      throw new UnauthorizedException(
+        'Sessao nao encontrada para este usuario',
+      );
     }
 
     const isTokenMatch = await bcrypt.compare(
@@ -206,8 +211,12 @@ export class AuthService {
 
     this.authStore.saveSession(user.id, {
       refreshTokenHash,
-      accessTokenExpiresAt: this.resolveExpiration(String(accessTokenExpiresIn)),
-      refreshTokenExpiresAt: this.resolveExpiration(String(refreshTokenExpiresIn)),
+      accessTokenExpiresAt: this.resolveExpiration(
+        String(accessTokenExpiresIn),
+      ),
+      refreshTokenExpiresAt: this.resolveExpiration(
+        String(refreshTokenExpiresIn),
+      ),
     });
 
     return {

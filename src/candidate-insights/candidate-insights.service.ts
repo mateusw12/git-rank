@@ -94,10 +94,15 @@ export class CandidateInsightsService {
       const searchable = this.buildSearchableContent(repository);
 
       for (const detector of this.stackDetectors) {
-        const matched = detector.matches.some((token) => searchable.includes(token));
+        const matched = detector.matches.some((token) =>
+          searchable.includes(token),
+        );
 
         if (matched) {
-          stackScore.set(detector.stack, (stackScore.get(detector.stack) ?? 0) + 1);
+          stackScore.set(
+            detector.stack,
+            (stackScore.get(detector.stack) ?? 0) + 1,
+          );
         }
       }
     }
@@ -187,7 +192,8 @@ export class CandidateInsightsService {
       return Math.max(0, quality);
     });
 
-    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const average =
+      scores.reduce((sum, score) => sum + score, 0) / scores.length;
     return Number(average.toFixed(2));
   }
 

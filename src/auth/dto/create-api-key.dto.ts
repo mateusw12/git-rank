@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateApiKeyDto {
   @ApiProperty({ example: 'github-integration' })
@@ -9,7 +16,8 @@ export class CreateApiKeyDto {
 
   @ApiPropertyOptional({
     example: 30,
-    description: 'Quantidade de dias para expirar. Se nao enviado, usa o padrao da API.',
+    description:
+      'Quantidade de dias para expirar. Se nao enviado, usa o padrao da API.',
   })
   @IsOptional()
   @IsInt()

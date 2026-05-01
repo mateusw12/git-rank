@@ -10,7 +10,9 @@ export class ScoringService {
   private readonly activeRepoWindowDays = 90;
   private readonly recentRepoWindowDays = 30;
 
-  calculateCandidateScore(repositories: GithubRepository[]): CandidateScoreResult {
+  calculateCandidateScore(
+    repositories: GithubRepository[],
+  ): CandidateScoreResult {
     const metrics = this.buildMetrics(repositories);
 
     const activityScore = metrics.totalRepos * 2 + metrics.activeRepos * 3;
@@ -34,7 +36,9 @@ export class ScoringService {
     };
   }
 
-  private buildMetrics(repositories: GithubRepository[]): CandidateScoreMetrics {
+  private buildMetrics(
+    repositories: GithubRepository[],
+  ): CandidateScoreMetrics {
     const now = Date.now();
     const activeWindowMs = this.daysToMs(this.activeRepoWindowDays);
     const recentWindowMs = this.daysToMs(this.recentRepoWindowDays);
