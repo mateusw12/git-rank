@@ -1,15 +1,16 @@
 import { Injectable, HttpException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { GithubRepository } from './types/github-repository.type';
 
 @Injectable()
 export class GithubService {
   constructor(private readonly http: HttpService) {}
 
-  async getUserRepository(username: string) {
+  async getUserRepository(username: string): Promise<GithubRepository[]> {
     try {
       const response = await firstValueFrom(
-        this.http.get(`/users/${username}/repos`)
+        this.http.get<GithubRepository[]>(`/users/${username}/repos`)
       );
 
       return response.data;
