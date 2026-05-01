@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { GithubRepository } from './types/github-repository.type';
 import {
   GithubCandidateEvaluationResponse,
+  GithubCandidateInsightsResponse,
   GithubCandidateScoringResponse,
 } from './github.service';
 import { RepositoryCommitAnalysisResponse } from '../commit-analysis/types/commit-analysis.type';
@@ -42,6 +43,17 @@ export class GithubController {
     @Param('username') username: string,
   ): Promise<GithubCandidateEvaluationResponse> {
     return this.githubService.getCandidateEvaluation(username);
+  }
+
+  @ApiOperation({
+    summary:
+      'Gera insights de tecnologia e evolucao do candidato com base nos repositorios',
+  })
+  @Get(':username/insights')
+  async getCandidateInsights(
+    @Param('username') username: string,
+  ): Promise<GithubCandidateInsightsResponse> {
+    return this.githubService.getCandidateInsights(username);
   }
 
   @ApiOperation({

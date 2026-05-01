@@ -15,6 +15,8 @@ import {
 } from './types/github-commit.type';
 import { CommitAnalysisService } from '../commit-analysis/commit-analysis.service';
 import { RepositoryCommitAnalysisResponse } from '../commit-analysis/types/commit-analysis.type';
+import { CandidateInsightsService } from '../candidate-insights/candidate-insights.service';
+import { CandidateInsights } from '../candidate-insights/types/candidate-insights.type';
 
 export interface GithubCandidateScoringResponse {
   username: string;
@@ -27,6 +29,13 @@ export interface GithubCandidateEvaluationResponse {
   repositories: GithubRepository[];
   scoring: CandidateScoreResult;
   aiEvaluation: CandidateAiEvaluation;
+}
+
+export interface GithubCandidateInsightsResponse {
+  username: string;
+  repositories: GithubRepository[];
+  scoring: CandidateScoreResult;
+  insights: CandidateInsights;
 }
 
 @Injectable()
@@ -43,6 +52,7 @@ export class GithubService {
     private readonly scoringService: ScoringService,
     private readonly candidateEvaluationService: CandidateEvaluationService,
     private readonly commitAnalysisService: CommitAnalysisService,
+    private readonly candidateInsightsService: CandidateInsightsService,
   ) {
     this.repositoryCacheTtlSeconds = this.configService.get<number>(
       'GITHUB_REPOS_CACHE_TTL_SECONDS',
@@ -142,6 +152,21 @@ export class GithubService {
       repositories,
       scoring,
       aiEvaluation,
+    };
+  }
+
+  async getCandidateInsights(
+    username: string,
+  ): Promise<GithubCandidateInsightsResponse> {
+    const normalizedUsername = username.toLowerCase();
+    const repositories = await this.getUserRepository(normalizedUsername);
+    const scoring = this.scoringService.calculateCandidateScore(repositories);
+
+    return {
+      username: normalizedUsername,
+      repositories,
+      scoring,
+      insights: this.candidateInsightsService.buildInsights(repositories),
     };
   }
 

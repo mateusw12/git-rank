@@ -15,6 +15,7 @@ import { RedisMemoryService } from './queue/redis-memory.service';
 import { GithubModule } from './github/github.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { EvaluationModule } from './evaluation/evaluation.module';
+import { CandidateInsightsModule } from './candidate-insights/candidate-insights.module';
 
 const enableBullMq = process.env.ENABLE_BULLMQ !== 'false';
 
@@ -42,6 +43,7 @@ const enableBullMq = process.env.ENABLE_BULLMQ !== 'false';
     AuthModule,
     ScoringModule,
     EvaluationModule,
+    CandidateInsightsModule,
     GithubModule,
   ],
   controllers: [AppController],

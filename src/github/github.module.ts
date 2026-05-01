@@ -6,12 +6,14 @@ import { GithubService } from './github.service';
 import { ScoringModule } from '../scoring/scoring.module';
 import { EvaluationModule } from '../evaluation/evaluation.module';
 import { CommitAnalysisModule } from '../commit-analysis/commit-analysis.module';
+import { CandidateInsightsModule } from '../candidate-insights/candidate-insights.module';
 
 @Module({
   imports: [
     ScoringModule,
     EvaluationModule,
     CommitAnalysisModule,
+    CandidateInsightsModule,
     HttpModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
