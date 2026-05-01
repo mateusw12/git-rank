@@ -6,7 +6,7 @@ API em NestJS criada na raiz do repositório, sem subpastas.
 
 - NestJS (API)
 - Swagger em `/docs`
-- BullMQ com conexão Redis em memória via `ioredis-mock`
+- BullMQ com Redis em memória via `redis-memory-server`
 - Camada de database em memória para preparar integrações futuras
 
 ## Requisitos
@@ -57,7 +57,7 @@ Exemplo de payload para criar job:
 
 Esta versão usa armazenamento em memória:
 
-- Fila BullMQ conectada a Redis mock em memória
+- Fila BullMQ conectada a Redis em memória (sem serviço externo)
 - Camada de database in-memory em `src/database`
 
 Assim, os dados são perdidos ao reiniciar a aplicação. A estrutura já está preparada para trocar por conexões reais no futuro.
