@@ -22,6 +22,14 @@ async function bootstrap() {
     .setTitle('Git Rank API')
     .setDescription('API em NestJS com Swagger, BullMQ e camada de database em memoria')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

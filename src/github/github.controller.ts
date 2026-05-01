@@ -1,8 +1,11 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { GithubService } from './github.service';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @ApiTags('github')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller('github')
 export class GithubController {
   constructor(private readonly githubService: GithubService) {}
