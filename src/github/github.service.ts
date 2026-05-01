@@ -1,4 +1,4 @@
-import { Injectable, HttpException } from '@nestjs/common';
+import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -65,6 +65,7 @@ export interface GithubBatchCandidateEvaluationResponse {
 
 @Injectable()
 export class GithubService {
+  private readonly logger = new Logger(GithubService.name);
   private readonly repositoryCacheTtlSeconds: number;
   private readonly commitAnalysisCacheTtlSeconds: number;
   private readonly commitsFetchLimit: number;
@@ -105,12 +106,20 @@ export class GithubService {
   async getUserRepository(username: string): Promise<GithubRepository[]> {
     const normalizedUsername = username.toLowerCase();
     const cacheKey = `github:repos:${normalizedUsername}`;
+    const startedAt = Date.now();
+
+    this.logger.log(
+      `Iniciando busca de repositorios para ${normalizedUsername}`,
+    );
 
     try {
       const cached =
         await this.redisCacheService.getJson<GithubRepository[]>(cacheKey);
 
       if (cached) {
+        this.logger.log(
+          `Repositorios de ${normalizedUsername} obtidos via cache (${cached.length} repos) em ${this.elapsedMs(startedAt)}ms`,
+        );
         return cached;
       }
     } catch {
@@ -132,8 +141,15 @@ export class GithubService {
         // Nao bloqueia a resposta quando ocorrer falha temporaria de cache.
       }
 
+      this.logger.log(
+        `Repositorios de ${normalizedUsername} obtidos via GitHub (${response.data.length} repos) em ${this.elapsedMs(startedAt)}ms`,
+      );
+
       return response.data;
     } catch (error) {
+      this.logger.warn(
+        `Falha ao buscar repositorios de ${normalizedUsername} apos ${this.elapsedMs(startedAt)}ms`,
+      );
       throw new HttpException(
         'Erro ao buscar dados do GitHub',
         this.resolveHttpStatusFromUnknownError(error),
@@ -144,19 +160,31 @@ export class GithubService {
   async getCandidateScoring(
     username: string,
   ): Promise<GithubCandidateScoringResponse> {
+    const startedAt = Date.now();
+    const normalizedUsername = username.toLowerCase();
+    this.logger.log(`Iniciando calculo de score para ${normalizedUsername}`);
+
     const repositories = await this.getUserRepository(username);
+    const scoring = this.scoringService.calculateCandidateScore(repositories);
+
+    this.logger.log(
+      `Score concluido para ${normalizedUsername} (finalScore=${scoring.scores.finalScore}) em ${this.elapsedMs(startedAt)}ms`,
+    );
 
     return {
-      username: username.toLowerCase(),
+      username: normalizedUsername,
       repositories,
-      scoring: this.scoringService.calculateCandidateScore(repositories),
+      scoring,
     };
   }
 
   async getCandidateEvaluation(
     username: string,
   ): Promise<GithubCandidateEvaluationResponse> {
+    const startedAt = Date.now();
     const normalizedUsername = username.toLowerCase();
+    this.logger.log(`Iniciando avaliacao IA para ${normalizedUsername}`);
+
     const repositories = await this.getUserRepository(normalizedUsername);
     const scoring = this.scoringService.calculateCandidateScore(repositories);
     const aiEvaluation =
@@ -167,6 +195,10 @@ export class GithubService {
           scoring,
         ),
       );
+
+    this.logger.log(
+      `Avaliacao IA concluida para ${normalizedUsername} (model=${aiEvaluation.model}, score=${aiEvaluation.score}) em ${this.elapsedMs(startedAt)}ms`,
+    );
 
     return {
       username: normalizedUsername,
@@ -179,27 +211,42 @@ export class GithubService {
   async getCandidateInsights(
     username: string,
   ): Promise<GithubCandidateInsightsResponse> {
+    const startedAt = Date.now();
     const normalizedUsername = username.toLowerCase();
+    this.logger.log(
+      `Iniciando analise de perfil/insights para ${normalizedUsername}`,
+    );
+
     const repositories = await this.getUserRepository(normalizedUsername);
     const scoring = this.scoringService.calculateCandidateScore(repositories);
+    const insights = this.candidateInsightsService.buildInsights(repositories);
+
+    this.logger.log(
+      `Insights concluidos para ${normalizedUsername} (profile=${insights.technology.profile}) em ${this.elapsedMs(startedAt)}ms`,
+    );
 
     return {
       username: normalizedUsername,
       repositories,
       scoring,
-      insights: this.candidateInsightsService.buildInsights(repositories),
+      insights,
     };
   }
 
   async getBatchCandidateEvaluationSummary(
     usernames: string[],
   ): Promise<GithubBatchCandidateEvaluationResponse> {
+    const startedAt = Date.now();
     const normalizedUsernames = Array.from(
       new Set(
         usernames
           .map((username) => username.trim().toLowerCase())
           .filter((username) => username.length > 0),
       ),
+    );
+
+    this.logger.log(
+      `Iniciando avaliacao em lote para ${normalizedUsernames.length} usuario(s) com concorrencia=${this.batchEvaluationConcurrency}`,
     );
 
     const tasks = normalizedUsernames.map((username) => async () => {
@@ -230,6 +277,10 @@ export class GithubService {
     const totalSucceeded = results.filter(
       (item) => item.status === 'ok',
     ).length;
+
+    this.logger.log(
+      `Avaliacao em lote concluida: sucesso=${totalSucceeded}, falhas=${results.length - totalSucceeded}, tempo=${this.elapsedMs(startedAt)}ms`,
+    );
 
     return {
       totalRequested: usernames.length,
@@ -451,5 +502,9 @@ export class GithubService {
     }
 
     return 500;
+  }
+
+  private elapsedMs(startedAt: number): number {
+    return Date.now() - startedAt;
   }
 }

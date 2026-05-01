@@ -11,7 +11,7 @@ API em NestJS.
 - Camada de database em memória para preparar integrações futuras
 - Integração com GitHub API (repos e commits)
 - Scoring de candidato (activity, quality, consistency)
-- Avaliação com Gemini (com cache e fallback heurístico)
+- Avaliação com Ollama (com cache e fallback heurístico)
 - Insights de tecnologia e evolução temporal do candidato
 
 ## Requisitos
@@ -27,12 +27,12 @@ npm install
 
 ```bash
 # Linux/macOS
-cp .env.example .env
+cp env.example .env
 ```
 
 ```powershell
 # Windows PowerShell
-Copy-Item .env.example .env
+Copy-Item env.example .env
 ```
 
 ## Executar
@@ -52,16 +52,16 @@ Swagger: http://localhost:3000/docs
 
 ## Variaveis de ambiente
 
-Crie um arquivo `.env` com base no `.env.example`:
+Crie um arquivo `.env` com base no `env.example`:
 
 ```bash
 # Linux/macOS
-cp .env.example .env
+cp env.example .env
 ```
 
 ```powershell
 # Windows PowerShell
-Copy-Item .env.example .env
+Copy-Item env.example .env
 ```
 
 Variáveis principais:
@@ -75,7 +75,8 @@ Variáveis principais:
 - `API_KEY_EXPIRES_IN_DAYS`
 - `CACHE_PREFIX`
 - `GITHUB_TOKEN`
-- `GOOGLE_API_KEY`
+- `OLLAMA_API_KEY`
+- `OLLAMA_HOST`
 
 Variáveis de cache/limites:
 
@@ -85,15 +86,15 @@ Variáveis de cache/limites:
 - `GITHUB_COMMITS_STATS_LIMIT`
 - `GITHUB_BATCH_EVALUATION_CONCURRENCY`
 
-Variáveis Gemini:
+Variáveis Ollama:
 
-- `GEMINI_EVALUATION_CACHE_TTL_SECONDS`
-- `GEMINI_MODELS`
-- `GEMINI_MODEL`
-- `GEMINI_TEMPERATURE`
-- `GEMINI_MAX_OUTPUT_TOKENS`
-- `GEMINI_MAX_REPOSITORIES`
-- `GEMINI_MAX_TEXT_FIELD_LENGTH`
+- `OLLAMA_EVALUATION_CACHE_TTL_SECONDS`
+- `OLLAMA_MODELS`
+- `OLLAMA_MODEL`
+- `OLLAMA_TEMPERATURE`
+- `OLLAMA_MAX_OUTPUT_TOKENS`
+- `OLLAMA_MAX_REPOSITORIES`
+- `OLLAMA_MAX_TEXT_FIELD_LENGTH`
 
 ## Endpoints principais
 
@@ -152,7 +153,7 @@ Resposta (resumida):
 					"strengths": ["..."],
 					"weaknesses": ["..."],
 					"evaluatedAt": "2026-05-01T12:00:00.000Z",
-					"model": "gemini-2.0-flash"
+					"model": "llama3.1"
 				},
 				"profile": "Backend Node.js",
 				"stack": ["Node.js", "NestJS", "MongoDB"],

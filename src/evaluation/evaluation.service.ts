@@ -8,7 +8,7 @@ import {
   StoredCandidateAiEvaluation,
 } from './types/candidate-ai-evaluation.type';
 import { CandidateEvaluationStore } from './store/candidate-evaluation.store';
-import { GeminiService } from '../gemini/gemini.service';
+import { OllamaService } from '../ollama/ollama.service';
 
 @Injectable()
 export class CandidateEvaluationService {
@@ -21,18 +21,18 @@ export class CandidateEvaluationService {
     private readonly configService: ConfigService,
     private readonly redisCacheService: RedisCacheService,
     private readonly candidateEvaluationStore: CandidateEvaluationStore,
-    private readonly geminiService: GeminiService,
+    private readonly ollamaService: OllamaService,
   ) {
     this.cacheTtlSeconds = this.configService.get<number>(
-      'GEMINI_EVALUATION_CACHE_TTL_SECONDS',
+      'OLLAMA_EVALUATION_CACHE_TTL_SECONDS',
       21600,
     );
     this.maxRepositoriesForPrompt = this.configService.get<number>(
-      'GEMINI_MAX_REPOSITORIES',
+      'OLLAMA_MAX_REPOSITORIES',
       12,
     );
     this.maxTextFieldLength = this.configService.get<number>(
-      'GEMINI_MAX_TEXT_FIELD_LENGTH',
+      'OLLAMA_MAX_TEXT_FIELD_LENGTH',
       120,
     );
   }
@@ -48,7 +48,7 @@ export class CandidateEvaluationService {
       return fromDictionary;
     }
 
-    const cacheKey = `gemini:evaluation:${username}`;
+    const cacheKey = `ollama:evaluation:${username}`;
 
     try {
       const fromRedis =
@@ -112,22 +112,22 @@ export class CandidateEvaluationService {
     input: CandidateEvaluationInput,
   ): Promise<CandidateAiEvaluation> {
     try {
-      return await this.generateWithGemini(input);
+      return await this.generateWithOllama(input);
     } catch (error) {
       const reason =
         error instanceof Error ? error.message : 'erro desconhecido';
       this.logger.warn(
-        `Gemini indisponivel para ${input.username}. Aplicando fallback heuristico. Motivo: ${reason}`,
+        `Ollama indisponivel para ${input.username}. Aplicando fallback heuristico. Motivo: ${reason}`,
       );
       return this.generateHeuristicEvaluation(input);
     }
   }
 
-  private async generateWithGemini(
+  private async generateWithOllama(
     input: CandidateEvaluationInput,
   ): Promise<CandidateAiEvaluation> {
     const prompt = this.buildPrompt(input);
-    const result = await this.geminiService.generateJson(prompt);
+    const result = await this.ollamaService.generateJson(prompt);
     return this.parseModelResponse(result.text, result.model);
   }
 
@@ -267,11 +267,11 @@ Retorne JSON valido e sem markdown:
     try {
       parsed = JSON.parse(jsonPayload);
     } catch {
-      throw new BadGatewayException('Gemini retornou JSON invalido');
+      throw new BadGatewayException('Ollama retornou JSON invalido');
     }
 
     if (!parsed || typeof parsed !== 'object') {
-      throw new BadGatewayException('Gemini retornou payload inesperado');
+      throw new BadGatewayException('Ollama retornou payload inesperado');
     }
 
     const payload = parsed as {
@@ -321,7 +321,7 @@ Retorne JSON valido e sem markdown:
       return text.slice(start, end + 1);
     }
 
-    throw new BadGatewayException('Gemini nao retornou um JSON detectavel');
+    throw new BadGatewayException('Ollama nao retornou um JSON detectavel');
   }
 
   private normalizeLevel(value: unknown): CandidateLevel {
