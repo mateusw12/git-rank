@@ -48,6 +48,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 GITHUB_TOKEN=opcional-para-a-api-do-github
 GITHUB_REPOS_CACHE_TTL_SECONDS=300
 CACHE_PREFIX=git-rank
+API_KEY_EXPIRES_IN_DAYS=90
 
 ## Endpoints principais
 
@@ -59,6 +60,9 @@ CACHE_PREFIX=git-rank
 - Privados (Bearer access token):
 	- GET /auth/me
 	- POST /auth/logout
+	- POST /auth/api-keys
+	- GET /auth/api-keys
+	- DELETE /auth/api-keys/:apiKeyId
 	- GET /github/:username/repos
 	- POST /jobs
 	- GET /jobs/:id

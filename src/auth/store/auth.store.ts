@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { UserRole } from './enums/user-role.enum';
+import { UserRole } from '../enums/user-role.enum';
 
 type StoredUser = {
   id: string;

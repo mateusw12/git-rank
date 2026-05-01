@@ -11,7 +11,7 @@ import { AuthenticatedUser } from '../common/interfaces/authenticated-user.inter
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
-import { AuthStore } from './auth.store';
+import { AuthStore } from './store/auth.store';
 import { UserRole } from './enums/user-role.enum';
 
 type TokenPair = {
